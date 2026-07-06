@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智慧医养大数据公共服务平台 - 医生服务系统</title>
+    <!-- 引入 Axios -->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', '微软雅黑', Arial, sans-serif; min-height: 100vh; overflow: hidden; background-color: #f0f2f5; }
+        
+        /* ===== 动画关键帧 ===== */
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        @keyframes gradientMove { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+
+        /* ===== 欢迎闪屏 ===== */
+        .splash-screen {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, #00b55a 0%, #00d46a 40%, #00a550 100%);
+            background-size: 200% 200%;
+            animation: gradientMove 6s ease infinite;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            z-index: 1000; transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+        }
+        .splash-screen.hide {
+            opacity: 0; transform: scale(1.1);
+            pointer-events: none;
+        }
+
+        .splash-content {
+            position: relative; z-index: 2; text-align: center; color: white;
+        }
+        .splash-icon {
+            font-size: 80px; margin-bottom: 24px; display: block;
+            animation: float 3s ease-in-out infinite;
+        }
+        .splash-title {
+            font-size: 42px; font-weight: 800; letter-spacing: 4px;
+            margin-bottom: 12px; text-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            animation: fadeInUp 0.8s ease 0.2s both;
+        }
+        .splash-subtitle {
+            font-size: 18px; opacity: 0.9; letter-spacing: 2px;
+            animation: fadeInUp 0.8s ease 0.4s both;
+            margin-bottom: 50px;
+        }
+
+        .splash-enter-btn {
+            position: relative;
+            padding: 18px 56px; background: white;
+            border: none; border-radius: 50px;
+            color: #00b55a; font-size: 18px; font-weight: 600;
+            cursor: pointer; transition: all 0.3s ease;
+            letter-spacing: 2px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            animation: fadeInUp 0.8s ease 0.6s both;
+        }
+        .splash-enter-btn:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+        }
+
+        /* ===== 登录页 ===== */
+        .login-page {
+            min-height: 100vh; display: flex; align-items: center; justify-content: center;
+            background: #f0f2f5 url('https://gw.alipayobjects.com/zos/rmsportal/TV2t91tQnc9bJkf_99.svg') no-repeat center;
+            background-size: 100%;
+            opacity: 0; transition: opacity 0.6s ease;
+        }
+        .login-page.show { opacity: 1; }
+        
+        .login-container {
+            width: 1000px; height: 600px; background: white;
+            border-radius: 20px; display: flex; overflow: hidden;
+            box-shadow: 0 20px 80px rgba(0,0,0,0.1);
+        }
+
+        /* 左侧装饰区 */
+        .login-left {
+            flex: 1.2;
+            background: linear-gradient(135deg, #00b55a 0%, #00d46a 100%);
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            padding: 60px; color: white; text-align: center;
+        }
+        .login-left h2 { font-size: 32px; margin-bottom: 20px; font-weight: 800; }
+        .login-left p { font-size: 16px; line-height: 1.8; opacity: 0.8; }
+        
+        /* 右侧登录区 */
+        .login-right {
+            flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px;
+        }
+        .login-box { width: 100%; max-width: 360px; }
+        .brand-title { font-size: 24px; font-weight: bold; color: #333; margin-bottom: 30px; text-align: center; }
+        
+        .form-item { margin-bottom: 24px; }
+        .form-item label { display: block; font-size: 14px; color: #666; margin-bottom: 8px; }
+        .form-input {
+            width: 100%; height: 50px; border: 1px solid #dcdfe6;
+            border-radius: 8px; padding: 0 15px; font-size: 15px;
+            transition: all 0.3s; outline: none;
+        }
+        .form-input:focus { border-color: #00b55a; box-shadow: 0 0 0 3px rgba(0, 181, 90, 0.1); }
+        
+        .captcha-row { margin-bottom: 20px; }
+        .captcha-wrapper { display: flex; gap: 10px; align-items: center; }
+        .captcha-input { flex: 1; }
+        .captcha-image {
+            height: 50px; width: 130px; border-radius: 8px; border: 1px solid #dcdfe6;
+            flex-shrink: 0; background: #f5f7fa; object-fit: cover;
+            transition: border-color 0.3s;
+        }
+        .captcha-image:hover { border-color: #00b55a; }
+
+        .login-btn {
+            width: 100%; height: 50px; background: #00b55a; color: white;
+            border: none; border-radius: 8px; font-size: 16px; font-weight: bold;
+            cursor: pointer; transition: all 0.3s; letter-spacing: 4px; margin-top: 10px;
+        }
+        .login-btn:hover { background: #009e4f; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,181,90,0.3); }
+        .login-btn:active { transform: translateY(0); }
+        .login-btn:disabled { background: #c2e7d1; cursor: not-allowed; transform: none; }
+
+        .login-footer { margin-top: 20px; display: flex; justify-content: space-between; font-size: 13px; color: #999; }
+        .login-footer a { color: #00b55a; text-decoration: none; }
+
+        /* Toast */
+        .toast {
+            position: fixed; top: 30px; left: 50%; transform: translateX(-50%);
+            padding: 12px 24px; border-radius: 8px; color: white; font-size: 14px;
+            z-index: 2000; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            animation: fadeInDown 0.3s ease;
+        }
+        .toast.error { background: #f56c6c; }
+        .toast.success { background: #67c23a; }
+
+        @media (max-width: 900px) {
+            .login-left { display: none; }
+            .login-container { width: 90%; height: auto; padding: 40px 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="splash-screen" id="splashScreen">
+        <div class="splash-content">
+            <span class="splash-icon">🏥</span>
+            <h1 class="splash-title">智慧医养服务平台</h1>
+            <p class="splash-subtitle">专业 · 智能 · 温情</p>
+            <button class="splash-enter-btn" onclick="enterLogin()">立即进入</button>
+        </div>
+    </div>
+
+    <div class="login-page" id="loginPage">
+        <div class="login-container">
+            <div class="login-left">
+                <span style="font-size: 80px; margin-bottom: 30px;">👨‍⚕️</span>
+                <h2>医生服务系统</h2>
+                <p>致力于为每一位医生提供最高效的智慧医疗管理工具，守护万千老人的健康晚年。</p>
+            </div>
+            <div class="login-right">
+                <div class="login-box">
+                    <div class="brand-title">欢迎登录</div>
+                    <form onsubmit="handleLogin(event)">
+                        <div class="form-item">
+                            <label>用户名 / 工号</label>
+                            <input type="text" class="form-input" id="username" placeholder="请输入用户名" required>
+                        </div>
+                        <div class="form-item">
+                            <label>密码</label>
+                            <input type="password" class="form-input" id="password" placeholder="请输入密码" required>
+                        </div>
+                        <div class="form-item captcha-row">
+                            <label>验证码</label>
+                            <div class="captcha-wrapper">
+                                <input type="text" class="form-input captcha-input" id="captchaCode" placeholder="输入验证码" maxlength="4" autocomplete="off" required>
+                                <img id="captchaImg" class="captcha-image" src="" alt="验证码" title="点击刷新验证码" onclick="refreshCaptcha()" style="cursor:pointer;">
+                                <input type="hidden" id="captchaKey" value="">
+                            </div>
+                        </div>
+                        <button type="submit" class="login-btn" id="loginBtn">登录系统</button>
+                    </form>
+                    <div class="login-footer">
+                        <label><input type="checkbox"> 记住我</label>
+                        <a href="#" onclick="showResetModal();return false;">忘记密码？</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function enterLogin() {
+            document.getElementById('splashScreen').classList.add('hide');
+            document.getElementById('loginPage').classList.add('show');
+        }
+
+        // 验证码刷新
+        function refreshCaptcha() {
+            fetch('/api/auth/captcha').then(r => r.json()).then(data => {
+                if (data.code === 200) {
+                    document.getElementById('captchaImg').src = data.data.image;
+                    document.getElementById('captchaKey').value = data.data.key;
+                }
+            }).catch(() => {});
+        }
+
+        // 忘记密码弹窗
+        function showResetModal() {
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+            modal.innerHTML = `<div style="background:white;border-radius:16px;padding:30px;width:380px;max-width:90%;">
+                <h3 style="margin-bottom:20px;color:#333;">🔒 密码找回</h3>
+                <div style="margin-bottom:14px;"><label style="font-size:13px;color:#666;">用户名</label><input type="text" id="resetUsername" class="form-input" placeholder="请输入用户名"></div>
+                <div style="margin-bottom:14px;"><label style="font-size:13px;color:#666;">绑定手机号</label><input type="text" id="resetPhone" class="form-input" placeholder="请输入手机号"></div>
+                <div style="margin-bottom:20px;"><label style="font-size:13px;color:#666;">新密码</label><input type="password" id="resetNewPwd" class="form-input" placeholder="至少6位新密码"></div>
+                <div style="display:flex;gap:10px;">
+                    <button onclick="this.closest('div[style]').parentElement.remove()" style="flex:1;padding:10px;border:1px solid #ddd;border-radius:8px;background:white;cursor:pointer;">取消</button>
+                    <button onclick="submitReset(this)" style="flex:1;padding:10px;border:none;border-radius:8px;background:#00b55a;color:white;cursor:pointer;">确认重置</button>
+                </div>
+            </div>`;
+            document.body.appendChild(modal);
+        }
+
+        async function submitReset(btn) {
+            const username = document.getElementById('resetUsername').value.trim();
+            const phone = document.getElementById('resetPhone').value.trim();
+            const newPassword = document.getElementById('resetNewPwd').value.trim();
+            if (!username || !newPassword) { showToast('请填写完整信息', true); return; }
+            if (newPassword.length < 6) { showToast('新密码至少6位', true); return; }
+            try {
+                const res = await fetch('/api/auth/resetPassword', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, phone, newPassword })
+                });
+                const data = await res.json();
+                if (data.code === 200) {
+                    showToast('密码重置成功！');
+                    btn.closest('div[style]').parentElement.remove();
+                } else {
+                    showToast(data.msg || '重置失败', true);
+                }
+            } catch(e) { showToast('网络错误', true); }
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const captchaCode = document.getElementById('captchaCode').value.trim();
+            const captchaKey = document.getElementById('captchaKey').value;
+            const btn = document.getElementById('loginBtn');
+
+            if (!captchaCode) {
+                showToast('请输入验证码', 'error');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerText = '登录中...';
+
+            try {
+                const res = await axios.post('/api/auth/login', {
+                    username,
+                    password,
+                    captchaKey,
+                    captchaCode
+                });
+                const data = res.data;
+                if (data.code === 200) {
+                    showToast('登录成功，正在跳转...', 'success');
+                    localStorage.setItem('token', data.data.token);
+                    localStorage.setItem('userInfo', JSON.stringify(data.data));
+                    setTimeout(() => window.location.href = '/pages/index.html', 1000);
+                } else {
+                    showToast(data.msg || '登录失败', 'error');
+                    refreshCaptcha();
+                    document.getElementById('captchaCode').value = '';
+                }
+            } catch (err) {
+                showToast('服务器异常，请稍后再试', 'error');
+                refreshCaptcha();
+                document.getElementById('captchaCode').value = '';
+            } finally {
+                btn.disabled = false;
+                btn.innerText = '登录系统';
+            }
+        }
+
+        function showToast(msg, type) {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerText = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // 页面加载时获取验证码
+        refreshCaptcha();
+
+        // 已登录直接跳转
+        if (localStorage.getItem('token')) window.location.href = '/pages/index.html';
+    </script>
+    
+    <style>
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-6px); }
+            50% { transform: translateX(6px); }
+            75% { transform: translateX(-4px); }
+        }
+    </style>
+</body>
+</html>
