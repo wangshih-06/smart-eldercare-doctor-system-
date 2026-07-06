@@ -1,5 +1,7 @@
 # 智慧医养大数据公共服务平台 · 医生服务系统
 
+> SpringBoot + Vue 3 + Element Plus + ECharts 的老年健康管理平台。
+
 面向社区医生 / 护士的老年健康管理平台。后端 Spring Boot，前端 Vue 3 + Element Plus + ECharts 单页应用，采用「墨青 · 临床守护」深色视觉主题，签名元素为生命体征 ECG 律动。
 
 ---
