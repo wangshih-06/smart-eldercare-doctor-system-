@@ -567,7 +567,7 @@ createApp({
                             <td>{{ row.nextFollowDate || '-' }}</td>
                             <td>{{ row.completedCount || 0 }}/{{ row.totalCount || 0 }}</td>
                             <td><span class="tag" :class="row.status===1?'tag-success':row.status===0?'tag-warning':'tag-default'">{{ planStatusText(row.status) }}</span></td>
-                            <td><div class="actions"><button class="link" @click="openRecordModal(row)">记录随访结果</button></div></td>
+                            <td><div class="actions"><button class="link" @click="openFollowRecords(row)">查看记录</button><button class="link" @click="openRecordModal(row)">记录随访结果</button></div></td>
                         </tr>
                         </tbody>
                     </table>
@@ -1337,6 +1337,45 @@ createApp({
                     </div>
                     <div class="form-row" style="margin-top:12px; grid-template-columns:1fr;"><div class="field"><label>随访结果</label><textarea v-model="followRecordForm.followResult"></textarea></div></div>
                 </template>
+                <!-- ====== 随访记录列表（按计划下钻） ====== -->
+                <template v-else-if="modal==='follow-records'">
+                    <div class="table-wrap">
+                        <table class="data-table">
+                            <thead><tr><th>随访日期</th><th>随访方式</th><th>血压</th><th>心率</th><th>空腹血糖</th><th>用药依从性</th><th>操作</th></tr></thead>
+                            <tbody>
+                            <tr v-if="followRecords.length===0"><td colspan="7"><div class="empty-state">该计划暂无随访记录</div></td></tr>
+                            <tr v-for="rec in followRecords" :key="rec.id">
+                                <td>{{ dateTimeText(rec.followDate) }}</td>
+                                <td>{{ followTypeText(rec.followType) }}</td>
+                                <td>{{ rec.systolicPressure || '-' }}/{{ rec.diastolicPressure || '-' }}</td>
+                                <td>{{ rec.heartRate || '-' }}</td>
+                                <td>{{ rec.bloodSugarFasting || '-' }}</td>
+                                <td>{{ medicationComplianceText(rec.medicationCompliance) }}</td>
+                                <td><div class="actions"><button class="link" @click="openFollowRecordDetail(rec)">详情</button></div></td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </template>
+                <!-- ====== 随访记录详情 ====== -->
+                <template v-else-if="modal==='follow-record-detail'">
+                    <div class="grid-1"><div class="card list-card">
+                        <div class="list-title">随访记录详情</div>
+                        <div class="timeline-card"><div class="desc">随访日期</div><div>{{ dateTimeText(modalData.item?.followDate) }}</div></div>
+                        <div class="timeline-card"><div class="desc">随访方式</div><div>{{ followTypeText(modalData.item?.followType) }}</div></div>
+                        <div class="timeline-card"><div class="desc">老人ID</div><div>{{ modalData.item?.elderId || '-' }}</div></div>
+                        <div class="timeline-card"><div class="desc">血压 (收缩/舒张)</div><div>{{ modalData.item?.systolicPressure || '-' }} / {{ modalData.item?.diastolicPressure || '-' }} mmHg</div></div>
+                        <div class="timeline-card"><div class="desc">心率</div><div>{{ modalData.item?.heartRate || '-' }} 次/分</div></div>
+                        <div class="timeline-card"><div class="desc">空腹血糖</div><div>{{ modalData.item?.bloodSugarFasting || '-' }} mmol/L</div></div>
+                        <div class="timeline-card"><div class="desc">体重</div><div>{{ modalData.item?.weight || '-' }} kg</div></div>
+                        <div class="timeline-card"><div class="desc">用药依从性</div><div>{{ medicationComplianceText(modalData.item?.medicationCompliance) }}</div></div>
+                        <div class="timeline-card" v-if="modalData.item?.currentMedication"><div class="desc">当前用药</div><div>{{ modalData.item.currentMedication }}</div></div>
+                        <div class="timeline-card" v-if="modalData.item?.symptomDesc"><div class="desc">症状描述</div><div>{{ modalData.item.symptomDesc }}</div></div>
+                        <div class="timeline-card"><div class="desc">随访结果</div><div>{{ modalData.item?.followResult || '-' }}</div></div>
+                        <div class="timeline-card"><div class="desc">下次随访日期</div><div>{{ modalData.item?.nextFollowDate || '-' }}</div></div>
+                        <div class="timeline-card" v-if="modalData.item?.remark"><div class="desc">备注</div><div>{{ modalData.item.remark }}</div></div>
+                    </div></div>
+                </template>
                 <template v-else-if="modal==='intervention'">
                     <div class="form-row">
                         <div class="field"><label>老人ID</label><input type="number" v-model.number="interventionForm.elderId"></div>
@@ -1760,6 +1799,8 @@ createApp({
                 <template v-else-if="modal==='warning-handle'"><button class="ghost-btn" @click="closeModal">取消</button><button class="primary-btn" @click="submitWarningHandle">{{ modalData.action==='handle' ? '确认处理' : '确认忽略' }}</button></template>
                 <template v-else-if="modal==='plan'"><button class="ghost-btn" @click="closeModal">取消</button><button class="primary-btn" @click="savePlan">保存</button></template>
                 <template v-else-if="modal==='record'"><button class="ghost-btn" @click="closeModal">取消</button><button class="primary-btn" @click="saveFollowRecord">保存并记录随访</button></template>
+                <template v-else-if="modal==='follow-records'"><button class="ghost-btn" @click="closeModal">关闭</button><button class="primary-btn" @click="openRecordModal(followRecordsPlan)">+ 记录随访结果</button></template>
+                <template v-else-if="modal==='follow-record-detail'"><button class="ghost-btn" @click="backToFollowRecords">返回列表</button><button class="primary-btn" @click="closeModal">关闭</button></template>
                 <template v-else-if="modal==='intervention'"><button class="ghost-btn" @click="closeModal">取消</button><button class="primary-btn" @click="saveIntervention">保存</button></template>
                 <template v-else-if="modal==='nurse-record'"><button class="ghost-btn" @click="closeModal">取消</button><button class="primary-btn" @click="saveNurseRecord">保存护理记录</button></template>
                 <template v-else-if="modal==='nurse-plan'"><button class="ghost-btn" @click="closeModal">取消</button><button class="primary-btn" @click="saveNursePlan">保存护理计划</button></template>
@@ -1855,6 +1896,8 @@ createApp({
             followPage: { records: [], pageNum: 1, pageSize: 10, pages: 0, total: 0 },
             planForm: blankPlan(),
             followRecordForm: blankFollowRecord(),
+            followRecords: [],
+            followRecordsPlan: null,
             interventionFilter: { type: '', elderId: '', followRecordId: '' },
             interventionPage: { records: [], pageNum: 1, pageSize: 10, pages: 0, total: 0 },
             interventionForm: blankIntervention(),
@@ -1947,6 +1990,8 @@ createApp({
                 'warning-handle': this.modalData.action === 'handle' ? '处理预警' : '查看预警',
                 plan: this.planForm.id ? '编辑随访计划' : '新增随访计划',
                 record: '记录随访结果',
+                'follow-records': this.followRecordsPlan?.planName ? ('随访记录 · ' + this.followRecordsPlan.planName) : '随访记录',
+                'follow-record-detail': '随访记录详情',
                 intervention: this.interventionForm.id ? '编辑干预记录' : '新增干预记录',
                 healthDetail: '老人健康详情',
                 interventionDetail: '干预详情',
@@ -2066,7 +2111,7 @@ createApp({
             return parts.join('\n');
         },
         modalWidth() {
-            return ['healthDetail', 'interventionDetail', 'assessment-report'].includes(this.modal) ? 'modal' : 'modal sm';
+            return ['healthDetail', 'interventionDetail', 'assessment-report', 'follow-records'].includes(this.modal) ? 'modal' : 'modal sm';
         },
         diseaseMap() { return DISEASE_MAP; },
         freqMap() { return FREQ_MAP; },
@@ -2231,6 +2276,11 @@ createApp({
         diseaseText(value) { return DISEASE_MAP[Number(value)] || '其他'; },
         freqText(value) { return FREQ_MAP[Number(value)] || '-'; },
         planStatusText(value) { return PLAN_STATUS[Number(value)] || '未知'; },
+        followTypeText(value) { return FOLLOW_TYPE_MAP[Number(value)] || '未知'; },
+        medicationComplianceText(value) {
+            const map = { 1: '完全依从', 2: '部分依从', 3: '不依从' };
+            return map[Number(value)] || '-';
+        },
         warnLevelText(value) { return WARN_LEVEL_MAP[Number(value)] || '未知'; },
         warnLevelClass(value) {
             const v = Number(value);
@@ -2941,6 +2991,28 @@ createApp({
             } else {
                 this.toast('提示', res?.msg || res?.message || '操作失败', 'error');
             }
+        },
+        async openFollowRecords(plan) {
+            this.followRecordsPlan = plan;
+            this.followRecords = [];
+            this.modal = 'follow-records';
+            this.modalData = { plan };
+            const query = new URLSearchParams({ pageNum: 1, pageSize: 50, planId: plan.id });
+            const res = await this.api(`/api/followup/records?${query.toString()}`);
+            if (res?.code === 200) {
+                const pg = res.data || {};
+                this.followRecords = pg.records || [];
+            } else {
+                this.toast('提示', res?.msg || res?.message || '加载随访记录失败', 'error');
+            }
+        },
+        openFollowRecordDetail(record) {
+            this.modal = 'follow-record-detail';
+            this.modalData = { item: record };
+        },
+        backToFollowRecords() {
+            this.modal = 'follow-records';
+            this.modalData = { plan: this.followRecordsPlan };
         },
         async loadInterventions(page = 1) {
             const query = new URLSearchParams({
