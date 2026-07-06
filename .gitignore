@@ -2,9 +2,14 @@
 target/
 *.class
 
-# ===== 工具（本地下载，不入库） =====
+# ===== 工具（本地下载的完整 Maven，不入库；改用 Maven Wrapper） =====
 .tooling/
-Redis-8.8.0-Windows-x64-cygwin-with-Service/
+
+# ===== 内置 Redis：二进制入库（Windows 开箱即用），仅排除运行时产物 =====
+Redis-8.8.0-Windows-x64-cygwin-with-Service/*.pid
+Redis-8.8.0-Windows-x64-cygwin-with-Service/*.rdb
+Redis-8.8.0-Windows-x64-cygwin-with-Service/*.aof
+Redis-8.8.0-Windows-x64-cygwin-with-Service/*.log
 
 # ===== 备份 / 临时 =====
 .backup-frontend/
@@ -25,8 +30,11 @@ upload/
 .DS_Store
 Thumbs.db
 
-# ===== Maven Wrapper（如有） =====
-!.mvn/wrapper/maven-wrapper.jar
+# ===== Maven Wrapper 必须入库 =====
+!.mvn/
+!.mvn/wrapper/
+!mvnw
+!mvnw.cmd
 
 # 前端改造备份（任意层级）
 **/.backup-frontend/
